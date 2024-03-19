@@ -23,6 +23,12 @@ u_creation_date DATETIME NOT NULL,
 FOREIGN KEY (u_currency_id) REFERENCES currencies(c_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
+-- Create unique index on users' id and email
+CREATE UNIQUE INDEX user_email ON users(u_id ASC, u_email);
+
+-- Delete index
+-- DROP INDEX user_email ON users;
+
 CREATE TABLE transactions(
 t_id INT PRIMARY KEY AUTO_INCREMENT,
 t_sender_id INT NOT NULL,
@@ -60,7 +66,6 @@ END//
 DELIMITER ;
 
 DELIMITER //
-
 CREATE TRIGGER process_transaction
 AFTER INSERT ON transactions 
 FOR EACH ROW 
@@ -74,22 +79,21 @@ BEGIN
     IF NEW.t_type = 'transfer' THEN
         IF sender_balance >= NEW.t_amount THEN
             UPDATE users 
-				SET u_balance = u_balance - NEW.t_amount 
-				WHERE u_id = NEW.t_sender_id;
+		SET u_balance = u_balance - NEW.t_amount 
+		WHERE u_id = NEW.t_sender_id;
             UPDATE users 
-				SET u_balance = u_balance + NEW.t_amount 
-				WHERE u_id = NEW.t_receiver_id;
+		SET u_balance = u_balance + NEW.t_amount 
+		WHERE u_id = NEW.t_receiver_id;
         ELSE
             SIGNAL SQLSTATE '45000' 
             SET MESSAGE_TEXT = 'Insufficient balance for the transfer';
         END IF;
     ELSEIF NEW.t_type = 'deposit' AND NEW.t_sender_id = NEW.t_receiver_id THEN
         UPDATE users 
-			SET u_balance = u_balance + NEW.t_amount 
-			WHERE u_id = NEW.t_receiver_id;
+	    SET u_balance = u_balance + NEW.t_amount 
+	    WHERE u_id = NEW.t_receiver_id;
     END IF;
 END//
-
 DELIMITER ;
 
 INSERT INTO nova_wallet.currencies
@@ -166,14 +170,7 @@ VALUES
 (12, 11, 3, 100, 'transfer', NOW());
 
 -- Trying to insert an invalid transaction (receiver currency doesn't match)
-INSERT INTO nova_wallet.transactions
-(t_sender_id,
-t_receiver_id,
-t_currency_id,
-t_amount,
-t_type,
-t_date) 
-VALUES (1, 12, 1, 200, 'transfer', NOW());
+-- INSERT INTO nova_wallet.transactions (t_sender_id, t_receiver_id, t_currency_id, t_amount, t_type, t_date) VALUES (1, 12, 1, 200, 'transfer', NOW());
 
 -- Get all users
 SELECT * FROM users;
